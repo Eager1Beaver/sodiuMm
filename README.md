@@ -21,23 +21,23 @@ sodiumm/
 │   ├── pipeline.py            # Full pipeline of analysis steps
 │   └── gui.py                 # Tkinter desktop GUI
 │
+├── app.py                     # 🌐 Streamlit web interface
 └── tests/                     # (Optional) Automated or manual tests
 ```
 
-All modules are **self-contained** and usable via command line or programmatic imports.
+All modules are **self-contained** and usable via CLI, GUI, or web browser.
 
 ---
 
 ## ⚙️ Features
 
 - **Robust input parsing** for both CSV and Excel (`.xlsx`) files  
-    Accepts either headered or positional columns.
-- **Boltzmann fitting** for activation ($m_{\infty}$) and inactivation ($h_{\infty}$) curves.
-- **Automatic intersections, window area, and biomarkers**:
+- **Boltzmann fitting** for activation ($m_{\infty}$) and inactivation ($h_{\infty}$) curves  
+- **Automatic computation of:**
   - Intersection voltage(s)
-  - Sodium window area: $\int max(o, m_{\infty} - h_{\infty}) dV$
+  - Sodium window area (integral of overlap)
   - Window peak amplitude and position
-- **Output bundle per run**:
+- **Output bundle per run:**
   ```
   output/<run_name>/
     curves.csv
@@ -47,28 +47,47 @@ All modules are **self-contained** and usable via command line or programmatic i
     metadata.json
     plots/window.png (.svg)
   ```
-- **Graphical interface** for intuitive single-file analysis.
-- **Scriptable pipeline** for batch or reproducible use.
+- **Three usage modes:**
+  1. **Web** - Streamlit-based online version 
+  2. **GUI** - desktop Tkinter interface  
+  3. **CLI** - batch and scripting 
 
 ---
 
 ## 🚀 Quick Start
 
-### 1️⃣ Install dependencies
+### 1️⃣ Access the Web App (Recommended)
 
-Create an environment (Python ≥ 3.9):
+No installation needed - simply open the live version here:
+
+👉 **[sodiumm.streamlit.app](https://sodiumm.streamlit.app)**
+
+**Usage:**
+1. Upload your CSV/XLSX dataset  
+2. Optionally specify Excel sheet and voltage bounds  
+3. Click **Run analysis**  
+4. View summary metrics and preview plots  
+5. Download all outputs (ZIP bundle)
+
+All processing is performed server-side using the same backend as the local pipeline.
+
+---
+
+### 2️⃣ Run Locally (optional)
+
+If you prefer offline analysis:
 
 ```bash
-pip install -r requirements.txt
+python src/main.py
 ```
+This command launches the GUI version by default. 
 
-### 2️⃣ Run from CLI
-
+#### CLI
 ```bash
 python src/pipeline.py data/sample.csv output/
 ```
 
-Optional arguments:
+Optional flags:
 
 | Flag | Description |
 |------|--------------|
@@ -76,27 +95,12 @@ Optional arguments:
 | `--sheet SHEET` | Excel sheet name (if not "data") |
 | `--bounds -120,80` | Voltage range for window metrics (mV) |
 
-Example:
-```bash
-python src/pipeline.py data/sample.csv output/ --run-name demo --bounds -120,80
-```
-
----
-
-### 3️⃣ Run the GUI
-
+#### GUI
 ```bash
 python src/gui.py
 ```
 
-Then:
-
-1. Choose your input file (`.csv` / `.xlsx`)  
-2. Select an output directory  
-3. (Optional) Specify sheet name and voltage bounds  
-4. Click **“Run analysis”**
-
-Results will appear in your chosen folder.
+Then select your input file, output directory, and click **Run analysis**.
 
 ---
 
@@ -110,9 +114,9 @@ Each dataset must describe **two gating curves**:
 | -80  | 0.05 | -80  | 0.95 |
 | ...  | ...  | ...  | ... |
 
-**Accepted variants:**  
+Accepted variants:
 - Headered or positional columns  
-- Case-insensitive aliases (e.g. `Vactivation`, $m_{\infty}$, `h`, etc.)  
+- Case-insensitive aliases (`Vactivation`, $m_{\infty}$, `h`, etc.)  
 - Missing or non-numeric entries are filtered automatically
 
 ---
@@ -121,57 +125,35 @@ Each dataset must describe **two gating curves**:
 
 | File | Description |
 |------|--------------|
-| **curves.csv** | Tidy dataset: `V`, `y`, `curve` (exp_act, exp_inact, fit_act, fit_inact) |
-| **biomarkers.csv** | Fit parameters (A_lo, A_hi, V_half, k) and quality metrics ($R^2$, RMSE) |
-| **area.txt** | Numerical window area, bounds, intersections, and peak info |
-| **report.xlsx** | Excel summary (curves + biomarkers + area) |
-| **metadata.json** | Run metadata (timestamp, config, file paths, etc.) |
-| **plots/** | Visualization of activation/inactivation and shaded window region |
+| **curves.csv** | Tidy dataset with raw & fitted curves |
+| **biomarkers.csv** | Fitting parameters and $R^2$/RMSE |
+| **area.txt** | Numerical area, bounds, intersections, and peak info |
+| **report.xlsx** | Excel summary |
+| **metadata.json** | Full run configuration & paths |
+| **plots/** | Activation/inactivation plot and shaded window |
 
-Example `area.txt`:
-```
-# Window area of sodium activation–inactivation
-Definition: Integral[min(m_inf(V), h_inf(V))] dV
-Area: 1.02
-Bounds: (-120, 80)
-Intersections (V*, y*): [(-55.2, 0.45)]
-Peak window: 0.45 at V=-55.2
-```
+---
+
+## 🌐 Web App Summary
+
+The **Streamlit** web version provides a ready-to-use browser interface for researchers and educators - no installation, setup, or dependencies required.
+
+**Access:** [https://sodiumm.streamlit.app](https://sodiumm.streamlit.app)
+
+**Workflow:**
+1. Upload sodium channel dataset  
+2. Wait a few seconds for processing  
+3. View area, bounds, and peak metrics  
+4. Preview plots or download full results
+
+All computations use the same validated pipeline as the CLI and GUI versions.
 
 ---
 
 ## 🧠 Scientific Context
 
-The **sodium window** quantifies the overlap between steady-state activation and inactivation.  
-It reflects persistent inward current near subthreshold voltages and plays a key role in excitability, arrhythmogenesis, and conduction safety factor.  
-
-This toolkit standardizes its **computation and visualization**, making it ideal for experimental electrophysiology datasets.
-
----
-
-## 🧩 Modular API
-
-Each component can be imported individually:
-
-```python
-from src import input_data, fitting, plots, output_data, pipeline
-
-loaded = input_data.load_input("data/sample.csv")
-act_fit = fitting.fit_activation(loaded.activation["V"], loaded.activation["y"])
-ina_fit = fitting.fit_inactivation(loaded.inactivation["V"], loaded.inactivation["y"])
-wm = fitting.compute_biomarkers(act_fit, ina_fit)
-```
-
----
-
-## 📦 Metadata and Reproducibility
-
-Each run embeds:
-- Full configuration and timestamps
-- Version (`sodiumm v0.1.0`)
-- Input source path and Excel sheet
-- Fitting and sampling parameters
-- Generated plot paths
+The **sodium window** quantifies the overlap between steady-state activation and inactivation, reflecting persistent inward current near subthreshold voltages.  
+This toolkit standardizes its **computation, visualization, and reporting**.
 
 ---
 
@@ -181,27 +163,32 @@ Each run embeds:
 |----------|----------|
 | `numpy`, `pandas` | Numerical and tabular data |
 | `matplotlib` | Plotting |
-| `scipy` | Nonlinear curve fitting and integration |
-| `openpyxl` | Excel report writing |
-| `tkinter` | GUI (standard library) |
+| `scipy` | Nonlinear fitting & integration |
+| `openpyxl` | Excel reports |
+| `streamlit` | Web interface |
+| `tkinter` | Desktop GUI (stdlib) |
 
 ---
 
-## 🧑‍💻 Authors and License
+## 🧑‍💻 Author and License
 
 Developed by **Ilia Golub** (2025)  
-License: MIT  
+License: **MIT**
 
-For academic or educational use, please cite appropriately or reference this repository.
+For academic or educational use, please cite or reference this repository.
 
 ---
 
 ## 🧾 Changelog
 
+**v0.2.0**
+- Added Streamlit web interface (`app.py`)
+- Public deployment: [sodiumm.streamlit.app](https://sodiumm.streamlit.app)
+- Unified output formatting and metadata
+
 **v0.1.0**
-- Initial stable release  
-- Complete end-to-end pipeline (CLI + GUI)  
-- Automatic area computation and plotting  
+- Initial stable release (CLI + GUI)
+- Automatic area computation and plotting
 - Metadata export for reproducibility
 
 ---
