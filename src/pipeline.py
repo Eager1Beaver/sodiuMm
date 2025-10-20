@@ -1,18 +1,16 @@
 """
-pipeline.py — orchestrates the full sodium-window analysis for a single input file.
+pipeline.py - assembles the full sodium-window analysis for a single input file.
 
-Responsibilities
-----------------
-1) Load experimental data (CSV/XLSX) via input_data.load_input
-2) Fit Boltzmann curves for activation and inactivation (fitting.py)
-3) Build tidy outputs (experimental + dense fitted grids)
-4) Compute intersections, window area, and window-peak biomarkers
-5) Save plots (PNG/SVG) and write CSV/XLSX/metadata bundle (output_data.py)
+Functionality:
+    1) Load experimental data (CSV/XLSX)
+    2) Fit Boltzmann curves for activation and inactivation
+    3) Build arranged outputs (experimental + dense fitted grids)
+    4) Compute intersections, window area, and window-peak biomarkers
+    5) Save plots (PNG/SVG) and write CSV/XLSX/metadata bundle
 
-Public API
-----------
-- PipelineConfig
-- run_pipeline(input_path, base_outdir, *, run_name=None, loader_cfg=None, fit_cfg=None, V_bounds=None, samples=None)
+Public methods:
+    - PipelineConfig
+    - run_pipeline(input_path, base_outdir, *, run_name=None, loader_cfg=None, fit_cfg=None, V_bounds=None, samples=None)
 
 Returns a dict with results and an OutputPaths dataclass from output_data.
 """
@@ -20,26 +18,26 @@ from __future__ import annotations
 
 from dataclasses import dataclass, asdict
 from pathlib import Path
-from typing import Dict, Optional, Tuple, List
+from typing import Dict, Optional, Tuple
 
-import numpy as np
 import pandas as pd
 
-# Local imports (support both package and flat script usage)
+# Local imports
 try:
     from . import input_data, fitting, output_data, plots
 except Exception:
-    import input_data, fitting, output_data, plots  # type: ignore
+    import input_data, fitting, output_data, plots 
 
 
 # ---------------------------
-# Configuration model
+# Configuration
 # ---------------------------
+
 
 @dataclass
 class PipelineConfig:
     samples_fit_grid: int = 1200         # points for evaluating fitted curves for plotting/export
-    include_svg_plot: bool = True        # also write SVG alongside PNG
+    include_svg_plot: bool = True
     excel_report: bool = True
     write_csvs: bool = True
     write_area_text: bool = True
@@ -47,7 +45,7 @@ class PipelineConfig:
 
 
 # ---------------------------
-# Orchestration
+# Pipeline
 # ---------------------------
 
 def run_pipeline(
@@ -59,7 +57,7 @@ def run_pipeline(
     fit_cfg: Optional[fitting.FittingConfig] = None,
     V_bounds: Optional[Tuple[float, float]] = None,
     samples: Optional[int] = None,
-) -> Dict:
+    ) -> Dict:
     """Run the sodium-window analysis end-to-end and write outputs.
 
     Parameters
@@ -81,7 +79,7 @@ def run_pipeline(
 
     Returns
     -------
-    dict with keys: {"loaded", "fits", "tidy_curves", "biomarkers", "window_metrics", "paths"}
+    dict with keys: {"loaded", "fits", "arranged_curves", "biomarkers", "window_metrics", "paths"}
     """
     input_path = Path(input_path)
     base_outdir = Path(base_outdir)
@@ -107,16 +105,15 @@ def run_pipeline(
         Vmin, Vmax = (float(min(V_bounds)), float(max(V_bounds)))
 
     n = int(samples or pcfg.samples_fit_grid)
-    V_grid = fitting.build_voltage_grid(Vmin, Vmax, n)
 
     Va, ya = fitting.evaluate_on_grid(act_fit.params, Vmin, Vmax, n)
     Vi, yi = fitting.evaluate_on_grid(inact_fit.params, Vmin, Vmax, n)
 
-    # 4) Tidy curves dataframe (experimental + fits)
-    tidy_exp = loaded.as_tidy()
+    # 4) Arranged curves dataframe (experimental + fits)
+    tidy_exp = loaded.make_standardized()
     fit_act_df = pd.DataFrame({"V": Va, "y": ya, "curve": "fit_act"})
     fit_inact_df = pd.DataFrame({"V": Vi, "y": yi, "curve": "fit_inact"})
-    tidy_curves = pd.concat([tidy_exp, fit_act_df, fit_inact_df], ignore_index=True)
+    arranged_curves = pd.concat([tidy_exp, fit_act_df, fit_inact_df], ignore_index=True)
 
     # 5) Biomarkers table for curves (parameters + fit quality)
     biom_cols = ["curve", "A_lo", "A_hi", "V_half", "k", "r2", "rmse", "method"]
@@ -130,7 +127,7 @@ def run_pipeline(
             "r2": act_fit.r2,
             "rmse": act_fit.rmse,
             "method": act_fit.method,
-        },
+            },
         {
             "curve": "fit_inact",
             "A_lo": inact_fit.params.A_lo,
@@ -140,8 +137,8 @@ def run_pipeline(
             "r2": inact_fit.r2,
             "rmse": inact_fit.rmse,
             "method": inact_fit.method,
-        },
-    ], columns=biom_cols)
+            },
+            ], columns=biom_cols)
 
     # 6) Window metrics (intersections, area, peak)
     wm = fitting.compute_biomarkers(act_fit, inact_fit, V_bounds=(Vmin, Vmax), samples=max(n, 2000))
@@ -156,28 +153,26 @@ def run_pipeline(
         write_excel=pcfg.excel_report,
         write_metadata=pcfg.write_metadata,
         write_area_text=pcfg.write_area_text,
-    )
+        )
 
-    # Ensure run_dir/plots exists so we can save figures first and then include paths in metadata
+    # Ensure run_dir/plots exists
     run_dir = out_cfg.base_outdir / (out_cfg.run_name or "run")
     plots_dir = run_dir / "plots"
     plots_dir.mkdir(parents=True, exist_ok=True)
 
     # Save plots
     fig_paths = plots.save_window_plots(
-        tidy_curves=tidy_curves,
-        act_fit=act_fit,
-        inact_fit=inact_fit,
+        arranged_curves=arranged_curves,
         window_metrics=wm,
         outdir=plots_dir,
         filename_base="window",
         dpi=220,
         include_svg=True,
-    )
+        )
 
-    # Write CSVs/XLSX/metadata (with the plot paths we just created)
+    # Write CSVs/XLSX/metadata
     paths = output_data.write_outputs(
-        tidy_curves=tidy_curves,
+        arranged_curves=arranged_curves,
         biomarkers=biomarkers,
         window_metrics=wm,
         config=out_cfg,
@@ -188,17 +183,17 @@ def run_pipeline(
             "loader_messages": loaded.messages,
             "V_grid": [Vmin, Vmax, n],
             "fit_config": asdict(fit_cfg),
-        },
-    )
+            },
+            )
 
     return {
         "loaded": loaded,
         "fits": {"activation": act_fit, "inactivation": inact_fit},
-        "tidy_curves": tidy_curves,
+        "arranged_curves": arranged_curves,
         "biomarkers": biomarkers,
         "window_metrics": wm,
         "paths": paths,
-    }
+        }
 
 
 # ---------------------------

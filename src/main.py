@@ -1,32 +1,29 @@
 """
-main.py — unified entry point for sodiumm
+main.py - unified entry point for sodiuMm
 
-Usage
------
-GUI (default):
-    python -m sodiumm   # if packaged
-    python src/main.py  # from source tree
+Usage:
+    GUI (default):
+        python -m sodiumm   # if packaged
+        python src/main.py  # from source tree
 
-CLI (batch):
-    python src/main.py run data/sample.csv output/ --run-name demo --bounds -120,80 --sheet data
+    CLI (batch):
+        python src/main.py run data/sample.csv output/ --run-name demo --bounds -120,80 --sheet data
 
-Subcommands
------------
-- gui  : launch the Tkinter interface (default if no subcommand is given)
-- run  : run the pipeline headlessly on one input file
+Subcommands:
+    - gui: launch the Tkinter interface (default if no subcommand is given)
+    - run: run the pipeline headlessly on one input file
 """
 from __future__ import annotations
 
 import sys
-from pathlib import Path
 import argparse
 
-# Local imports (support both package and flat script usage)
+# Local imports
 try:
-    from . import pipeline, input_data, fitting, gui
+    from . import pipeline, input_data, gui
 except Exception:
-    import pipeline, input_data, fitting  # type: ignore
-    import gui  # type: ignore
+    import pipeline, input_data
+    import gui
 
 APP_VERSION = "0.1.0"
 
@@ -47,13 +44,13 @@ def _parse_bounds(s: str | None):
 def main(argv=None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
 
-    parser = argparse.ArgumentParser(prog="sodiumm", add_help=False)
-    parser.add_argument("--version", action="version", version=f"sodiumm {APP_VERSION}")
+    parser = argparse.ArgumentParser(prog="sodiuMm", add_help=False)
+    parser.add_argument("--version", action="version", version=f"sodiuMm {APP_VERSION}")
 
     subparsers = parser.add_subparsers(dest="command")
 
     # GUI subcommand (default)
-    p_gui = subparsers.add_parser("gui", help="Launch the GUI")
+    #p_gui = subparsers.add_parser("gui", help="Launch the GUI")
 
     # RUN subcommand
     p_run = subparsers.add_parser("run", help="Run the pipeline in CLI mode")
@@ -63,7 +60,7 @@ def main(argv=None) -> int:
     p_run.add_argument("--sheet", dest="sheet", default=None, help="Excel sheet name (default: tries 'data' or first sheet)")
     p_run.add_argument("--bounds", dest="bounds", default=None, help="Voltage bounds as Vmin,Vmax (e.g., -120,80)")
 
-    # If no subcommand supplied, assume GUI
+    # Assume GUI
     if not argv or argv[0] not in {"gui", "run"}:
         return _launch_gui()
 
@@ -97,7 +94,7 @@ def _run_cli(args) -> int:
             run_name=args.run_name,
             loader_cfg=lcfg,
             V_bounds=bounds,
-        )
+            )
         print("Completed. Output directory:", res["paths"].run_dir)
         return 0
     except Exception as e:

@@ -1,23 +1,23 @@
 """
-input_data.py — robust loader and validator for sodium activation / inactivation datasets.
+input_data.py - loader and validator for sodium activation and inactivation datasets.
 
 Expected input (CSV or Excel): 4 logical columns representing two curves:
-  - Activation:   V_act (mV), m_inf (0..1)
-  - Inactivation: V_inact (mV), h_inf (0..1)
+    - Activation:   V_act (mV), m_inf (0..1)
+    - Inactivation: V_inact (mV), h_inf (0..1)
 
 Accepted:
-  (A) Positional columns (no headers): [V_act, m_inf, V_inact, h_inf]
-  (B) Headered columns (case-insensitive, flexible names). See NAME_ALIASES below.
+    - Positional columns (no headers): [V_act, m_inf, V_inact, h_inf]
+    - Headered columns (case-insensitive, flexible names). See NAME_ALIASES below.
 
 Output: LoadedData with two DataFrames (activation, inactivation) with standardized
-columns ["V", "y", "curve"] where curve \in {"exp_act", "exp_inact"} and metadata.
+columns ["V", "y", "curve"] where curve in {"exp_act", "exp_inact"} and metadata.
 
 This module performs:
-  - File type sniffing and sheet selection for Excel
-  - Header inference and alias normalization
-  - Numeric coercion, NaN/inf removal, and optional clipping to [0,1]
-  - Sorting by voltage and duplicate-voltage consolidation
-  - Checks with actionable warnings
+    - File type sniffing and sheet selection for Excel
+    - Header inference and alias normalization
+    - Numeric coercion, NaN/inf removal, and optional clipping to [0,1]
+    - Sorting by voltage and duplicate-voltage consolidation
+    - Checks with actionable warnings
 
 """
 from __future__ import annotations
@@ -30,7 +30,7 @@ import numpy as np
 import pandas as pd
 
 # ---------------------------
-# Configuration & type models
+# Configuration
 # ---------------------------
 
 NAME_ALIASES: Dict[str, str] = {
@@ -49,14 +49,12 @@ NAME_ALIASES: Dict[str, str] = {
     # Activation fraction
     "m": "m_inf",
     "m_inf": "m_inf",
-    "m∞": "m_inf",
     "activation": "m_inf",
     "act": "m_inf",
     "fraction_activation": "m_inf",
     # Inactivation fraction
     "h": "h_inf",
     "h_inf": "h_inf",
-    "h∞": "h_inf",
     "inactivation": "h_inf",
     "inact": "h_inf",
     "fraction_inactivation": "h_inf",
@@ -99,7 +97,7 @@ class LoadedData:
     def make_standardized(self) -> pd.DataFrame:
         """Return a single standardized DataFrame with standardized columns.
 
-        Columns: ["V", "y", "curve"], where curve \in {"exp_act", "exp_inact"}.
+        Columns: ["V", "y", "curve"], where curve in {"exp_act", "exp_inact"}.
         """
         a = self.activation.copy()
         a["curve"] = "exp_act"
@@ -172,9 +170,9 @@ def load_input(path: str | Path, config: Optional[DataLoaderConfig] = None) -> L
 
     return LoadedData(activation=act, inactivation=ina, messages=msgs, source_path=p, sheet_name=used_sheet)
 
-# ---------------
+# ------------------
 # Internal functions
-# ---------------
+# ------------------
 
 def _read_csv(path: Path) -> pd.DataFrame:
     try:
@@ -224,7 +222,7 @@ def _standardize_columns(
     Returns
     -------
     (df_std, mode)
-      mode \in {"headers", "positional"}
+      mode in {"headers", "positional"}
     """
     # Work on a copy
     work = df.copy()
@@ -324,21 +322,21 @@ if __name__ == "__main__":
         dest="clip",
         action="store_false",
         help="Do not clip y to [0,1]",
-    )
+        )
     parser.add_argument(
         "--keep-dupes",
         dest="dedupe",
         action="store_false",
         help="Keep duplicate voltages (do not average)",
-    )
+        )
     args = parser.parse_args()
 
     cfg = DataLoaderConfig(sheet_name=args.sheet, clip_unit_interval=args.clip, drop_duplicate_voltages=args.dedupe)
     loaded = load_input(args.path, cfg)
 
     print("Loaded:")
-    print("  activation points:", len(loaded.activation))
-    print("  inactivation points:", len(loaded.inactivation))
+    print("     activation points:", len(loaded.activation))
+    print("     inactivation points:", len(loaded.inactivation))
     print("Messages:")
     print("  - " + "\n  - ".join(loaded.messages))
 

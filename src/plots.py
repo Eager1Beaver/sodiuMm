@@ -1,58 +1,51 @@
 """
-plots.py — publication-ready plotting for sodium activation/inactivation and window area.
+plots.py - plotting for sodium activation/inactivation and window area.
 
 This module provides a single high-level function:
+    save_window_plots(arranged_curves, window_metrics, outdir, filename_base="window")
 
-  save_window_plots(tidy_curves, act_fit, inact_fit, window_metrics, outdir, filename_base="window")
+    which produces PNG (and SVG) figures summarizing experimental points, fitted curves,
+    intersection points, and the shaded sodium "window" (m_inf - h_inf > 0).
 
-which produces PNG (and SVG) figures summarizing experimental points, fitted curves,
-intersection points, and the shaded sodium "window" (m_inf - h_inf > 0).
+Inputs:
+    - arranged_curves: pd.DataFrame with columns ["V", "y", "curve"], where curve ∈ {exp_act, exp_inact, fit_act, fit_inact}
+    - window_metrics: WindowMetrics (area, bounds, intersections, vmax_window, v_at_vmax_window)
+    - outdir: Path-like directory to save images
+    - filename_base: base name for files (e.g., "window" -> window.png, window.svg)
 
-Inputs
-------
-- tidy_curves: pd.DataFrame with columns ["V", "y", "curve"], where curve ∈ {exp_act, exp_inact, fit_act, fit_inact}
-- act_fit, inact_fit: CurveFitResult from fitting.py (used for captions/annotations if desired)
-- window_metrics: WindowMetrics (area, bounds, intersections, vmax_window, v_at_vmax_window)
-- outdir: Path-like directory to save images
-- filename_base: base name for files (e.g., "window" -> window.png, window.svg)
-
-Outputs
--------
-- List[Path] of saved figure paths
+Outputs:
+    - List[Path] of saved figure paths
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterable, List, Optional, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import pandas as pd
 
 import matplotlib
-matplotlib.use("Agg")  # headless-safe
+matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 
 # ---------------------------
-# Public API
+# Public methods
 # ---------------------------
 
 def save_window_plots(
-    tidy_curves: pd.DataFrame,
-    act_fit,
-    inact_fit,
+    arranged_curves: pd.DataFrame,
     window_metrics,
     outdir: Path | str,
     filename_base: str = "window",
     *,
     dpi: int = 200,
-    include_svg: bool = True,
-) -> List[Path]:
+    include_svg: bool = False,
+    ) -> List[Path]:
     outdir = Path(outdir)
     outdir.mkdir(parents=True, exist_ok=True)
 
-    fig1 = _make_main_plot(tidy_curves, window_metrics)
+    fig1 = _make_main_plot(arranged_curves, window_metrics)
 
     png_path = outdir / f"{filename_base}.png"
     fig1.savefig(png_path, dpi=dpi, bbox_inches="tight")
@@ -69,23 +62,23 @@ def save_window_plots(
 
 
 # ---------------------------
-# Internals
+# Private methods
 # ---------------------------
 
-def _make_main_plot(tidy_curves: pd.DataFrame, window_metrics) -> plt.Figure:
+def _make_main_plot(arranged_curves: pd.DataFrame, window_metrics) -> plt.Figure:
     required = {"V", "y", "curve"}
-    missing = required - set(tidy_curves.columns)
+    missing = required - set(arranged_curves.columns)
     if missing:
-        raise ValueError(f"tidy_curves missing columns: {sorted(missing)}")
+        raise ValueError(f"arranged_curves missing columns: {sorted(missing)}")
 
     # Split layers
     def layer(name: str) -> pd.DataFrame:
-        return tidy_curves[tidy_curves["curve"] == name]
+        return arranged_curves[arranged_curves["curve"] == name]
 
     exp_act = layer("exp_act")
     exp_inact = layer("exp_inact")
-    fit_act = layer("fit_act") if "fit_act" in tidy_curves["curve"].unique() else pd.DataFrame(columns=["V","y"]) 
-    fit_inact = layer("fit_inact") if "fit_inact" in tidy_curves["curve"].unique() else pd.DataFrame(columns=["V","y"]) 
+    fit_act = layer("fit_act") if "fit_act" in arranged_curves["curve"].unique() else pd.DataFrame(columns=["V","y"]) 
+    fit_inact = layer("fit_inact") if "fit_inact" in arranged_curves["curve"].unique() else pd.DataFrame(columns=["V","y"]) 
 
     # Figure
     fig, ax = plt.subplots(figsize=(7, 5))
@@ -105,7 +98,7 @@ def _make_main_plot(tidy_curves: pd.DataFrame, window_metrics) -> plt.Figure:
         ax.plot(fit_inact_sorted["V"], fit_inact_sorted["y"], linewidth=2.2, label="Inactivation (fit)")
 
     # Shade window region where m_inf − h_inf > 0 using fitted curves if available
-        # Shade the CAP: under the crossing, within the curves, down to y=0
+    # Shade the CAP: under the crossing, within the curves, down to y=0
     if len(fit_act) and len(fit_inact):
         fit_act_sorted = fit_act.sort_values("V")
         fit_inact_sorted = fit_inact.sort_values("V")
@@ -132,10 +125,10 @@ def _make_main_plot(tidy_curves: pd.DataFrame, window_metrics) -> plt.Figure:
             ax.annotate(f"V*={vx:.1f}", (vx, vy), textcoords="offset points", xytext=(6, 6))
 
     # Labels and style
-    ax.set_title("Sodium activation / inactivation and window area")
+    ax.set_title("Sodium activation/inactivation and window area")
     ax.set_xlabel("Voltage V (mV)")
     ax.set_ylabel("Fraction (unitless)")
-    ax.set_xlim(_auto_xlim(tidy_curves["V"].to_numpy()))
+    ax.set_xlim(_auto_xlim(arranged_curves["V"].to_numpy()))
     ax.set_ylim(-0.05, 1.05)
     ax.grid(True, alpha=0.3)
     ax.legend(frameon=False)
@@ -176,5 +169,5 @@ if __name__ == "__main__":
     wm = {"area": 10.0, "area_bounds": (-120, 80), "intersections": [(-45, 0.5)], "vmax_window": 0.6, "v_at_vmax_window": -35}
 
     tmp = Path(tempfile.mkdtemp())
-    paths = save_window_plots(df, None, None, wm, tmp)
+    paths = save_window_plots(df, wm, tmp)
     print("Saved:", paths)

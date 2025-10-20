@@ -1,38 +1,35 @@
 """
-gui.py — Tkinter GUI for the sodiumm sodium-window analysis tool.
+gui.py - Tkinter GUI for the sodiuMm - sodium-window analysis tool.
 
-User flow
----------
-1) Open input file (.csv/.xlsx)
-2) Choose output directory
-3) (Optional) Set run name, sheet name, voltage bounds
-4) Click "Run analysis"
-5) See completion status; open the output folder
+User flow:
+    1) Open input file (.csv/.xlsx)
+    2) Choose output directory
+    3) (Optional) Set run name, sheet name, voltage bounds
+    4) Click "Run analysis"
+    5) See completion status; open the output folder
 
 Notes
------
-• Runs pipeline on a background thread to keep UI responsive.
-• Shows an indeterminate progress bar and a live status label.
-• Disables controls during a run to prevent conflicts.
-• Robust error handling with messageboxes; logs short messages in the UI.
+    - Runs pipeline on a background thread to keep UI responsive.
+    - Shows an indeterminate progress bar and a live status label.
+    - Disables controls during a run to prevent conflicts.
+    - Logs short messages in the UI.
 """
 from __future__ import annotations
 
 import threading
-from dataclasses import asdict
 from pathlib import Path
 from typing import Optional, Tuple
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
-# Local imports (support both package and flat script usage)
+# Local imports
 try:
     from . import pipeline, input_data, fitting
 except Exception:
-    import pipeline, input_data, fitting  # type: ignore
+    import pipeline, input_data, fitting
 
-APP_TITLE = "sodiumm — Sodium Window Analysis"
+APP_TITLE = "sodiuMm - Sodium Window Analysis"
 APP_VERSION = "0.1.0"
 
 
@@ -51,7 +48,7 @@ class SodiumWindowApp(ttk.Frame):
         self.var_runname = tk.StringVar()
         self.var_sheet = tk.StringVar(value="data")
         self.var_bounds = tk.StringVar(value="-120,80")
-        self.var_svg = tk.BooleanVar(value=True)
+        self.var_svg = tk.BooleanVar(value=False)
 
         # Layout
         self._build_widgets()
@@ -59,6 +56,7 @@ class SodiumWindowApp(ttk.Frame):
     # ---------------------------
     # UI construction
     # ---------------------------
+
     def _build_widgets(self) -> None:
         # File selectors
         row = 0
@@ -68,7 +66,7 @@ class SodiumWindowApp(ttk.Frame):
         self.columnconfigure(1, weight=1)
         ttk.Entry(frm_in, textvariable=self.var_input).grid(row=0, column=0, sticky="ew")
         frm_in.columnconfigure(0, weight=1)
-        ttk.Button(frm_in, text="Browse…", command=self._choose_input).grid(row=0, column=1, padx=(6,0))
+        ttk.Button(frm_in, text="Browse...", command=self._choose_input).grid(row=0, column=1, padx=(6,0))
 
         row += 1
         ttk.Label(self, text="Output directory").grid(row=row, column=0, sticky="w")
@@ -76,7 +74,7 @@ class SodiumWindowApp(ttk.Frame):
         frm_out.grid(row=row, column=1, sticky="ew", padx=(8,0))
         ttk.Entry(frm_out, textvariable=self.var_outdir).grid(row=0, column=0, sticky="ew")
         frm_out.columnconfigure(0, weight=1)
-        ttk.Button(frm_out, text="Choose…", command=self._choose_outdir).grid(row=0, column=1, padx=(6,0))
+        ttk.Button(frm_out, text="Choose...", command=self._choose_outdir).grid(row=0, column=1, padx=(6,0))
 
         # Options
         row += 1
@@ -111,12 +109,16 @@ class SodiumWindowApp(ttk.Frame):
         self.pbar = ttk.Progressbar(prog, mode="indeterminate")
         self.pbar.grid(row=0, column=0, sticky="ew")
         prog.columnconfigure(0, weight=1)
-        self.lbl_status = ttk.Label(self, text="Ready.")
+        self.lbl_status = ttk.Label(self, text="Ready")
         self.lbl_status.grid(row=row+1, column=0, columnspan=2, sticky="w", pady=(6,0))
 
         # Footer
         row += 2
-        ttk.Label(self, text=f"{APP_TITLE}  •  v{APP_VERSION}", foreground="#555").grid(row=row, column=0, columnspan=2, sticky="w", pady=(12,0))
+        ttk.Label(
+            self, text=f"{APP_TITLE}  •  v{APP_VERSION}", foreground="#555"
+            ).grid(
+                row=row, column=0, columnspan=2, sticky="w", pady=(12,0)
+                )
 
         self.grid(sticky="nsew")
         self.master.rowconfigure(0, weight=1)
@@ -125,11 +127,17 @@ class SodiumWindowApp(ttk.Frame):
     # ---------------------------
     # Event handlers
     # ---------------------------
+
     def _choose_input(self) -> None:
         path = filedialog.askopenfilename(
             title="Select input file",
-            filetypes=[("Data files", "*.csv *.xlsx *.xls"), ("CSV", "*.csv"), ("Excel", "*.xlsx *.xls"), ("All files", "*.*")],
-        )
+            filetypes=[
+                ("Data files", "*.csv *.xlsx *.xls"), 
+                ("CSV", "*.csv"), 
+                ("Excel", "*.xlsx *.xls"), 
+                ("All files", "*.*")
+                ],
+                )
         if path:
             self.var_input.set(path)
             self.input_path = Path(path)
@@ -172,13 +180,13 @@ class SodiumWindowApp(ttk.Frame):
 
         # Disable UI and start background thread
         self._toggle_running(True)
-        self._set_status("Running analysis…")
+        self._set_status("Running analysis...")
 
         t = threading.Thread(
             target=self._run_pipeline_thread,
             args=(self.var_input.get(), self.var_outdir.get(), self.var_runname.get() or None, loader_cfg, fit_cfg, bounds),
             daemon=True,
-        )
+            )
         t.start()
 
     def _run_pipeline_thread(self, input_path: str, outdir: str, run_name: Optional[str], loader_cfg, fit_cfg, bounds):
@@ -190,19 +198,20 @@ class SodiumWindowApp(ttk.Frame):
                 loader_cfg=loader_cfg,
                 fit_cfg=fit_cfg,
                 V_bounds=bounds,
-            )
+                )
             run_dir = res["paths"].run_dir
             msg = (
                 f"Completed. Saved outputs in:\n{run_dir}\n\n"
                 f"curves.csv, biomarkers.csv, area.txt, report.xlsx, metadata.json, plots/"
-            )
+                )
             self._after_success(msg)
         except Exception as e:
             self._after_failure(str(e))
 
     # ---------------------------
-    # UI helpers (thread-safe via after)
+    # UI helpers
     # ---------------------------
+
     def _toggle_running(self, running: bool) -> None:
         def set_state(widget, state):
             try:
@@ -245,13 +254,12 @@ class SodiumWindowApp(ttk.Frame):
 
 
 # ---------------------------
-# Main entry point
+# Main
 # ---------------------------
 
 def main() -> None:
     root = tk.Tk()
     try:
-        # Optional: set a nice default ttk theme if available
         style = ttk.Style(root)
         if "clam" in style.theme_names():
             style.theme_use("clam")
