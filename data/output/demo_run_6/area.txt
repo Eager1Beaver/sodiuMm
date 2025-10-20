@@ -1,0 +1,9 @@
+# Window area of sodium activation–inactivation
+Definition: ∫ max(0, m∞(V) − h∞(V)) dV over the integration bounds.
+
+Area: 1.1961440447254117
+Bounds: (-67.45989318815408, -22.531962346607344)
+Intersections (V*, y*): [(-58.22113967877921, 0.10362257208360268)]
+Peak window (max m∞−h∞): 0.10362257208360268 at V=-58.22113967877921
+
+Notes: Area computed by Simpson integration on a dense grid.

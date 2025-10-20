@@ -1,0 +1,60 @@
+{
+  "timestamp": "2025-10-20T02:43:42",
+  "rows": {
+    "curves": 2412,
+    "biomarkers": 2
+  },
+  "window_metrics": {
+    "area": 1.1961440447254117,
+    "area_bounds": [
+      -67.45989318815408,
+      -22.531962346607344
+    ],
+    "intersections": [
+      [
+        -58.22113967877921,
+        0.10362257208360268
+      ]
+    ],
+    "vmax_window": 0.10362257208360268,
+    "v_at_vmax_window": -58.22113967877921
+  },
+  "plots": [
+    "/home/user/projects/sodiuMm/data/output/demo_run_6/plots/window.png",
+    "/home/user/projects/sodiuMm/data/output/demo_run_6/plots/window.svg"
+  ],
+  "extra": {
+    "source_path": "/home/user/projects/sodiuMm/data/sample.csv",
+    "sheet_name": null,
+    "loader_messages": [
+      "Using positional columns: [0..3] -> [V_act, m_inf, V_inact, h_inf]."
+    ],
+    "V_grid": [
+      -120.0,
+      80.0,
+      1200
+    ],
+    "fit_config": {
+      "A_lo_bounds": [
+        0.0,
+        1.0
+      ],
+      "A_hi_bounds": [
+        0.0,
+        1.0
+      ],
+      "V_half_bounds": [
+        -150.0,
+        150.0
+      ],
+      "k_bounds": [
+        0.1,
+        50.0
+      ],
+      "use_percentile_plateaus": true,
+      "enable_spline_fallback": true,
+      "spline_smoothing": null,
+      "default_samples": 1000
+    }
+  }
+}
