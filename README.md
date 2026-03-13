@@ -1,4 +1,4 @@
-# 🧪 sodiuMm - Sodium Window Analysis Tool
+# sodiuMm - Sodium Window Analysis Tool
 
 **sodiuMm** is a lightweight analysis tool for **sodium channel activation–inactivation ("window") curves**.  
 It processes experimental datasets, fits Boltzmann models, computes physiologically relevant biomarkers (e.g., window area, slope factor), and exports outputs and plots.
